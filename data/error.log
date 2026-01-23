@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/Users/sonnguyen/.gemini/antigravity/playground/quantum-constellation/src/workflow/action_item.py", line 175, in run
+    context_parts.append(f"--- Hợp đồng: {r.contract_id}, Trang {page_num} ---\n{content}")
+                                                                                 ^^^^^^^
+NameError: name 'content' is not defined

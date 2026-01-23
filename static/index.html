@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contract RAG - Hệ thống Quản lý Hợp đồng Thông minh</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #22d3ee;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-dark) 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid var(--success);
+            border-radius: 20px;
+            font-size: 0.875rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Main Layout */
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 2rem;
+        }
+
+        /* Chat Section */
+        .chat-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .chat-container {
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 500px;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 1rem 1.25rem;
+            border-radius: 16px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant {
+            background: var(--bg-card-hover);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-content {
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .message-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .sources {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .sources-title {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .source-item {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: rgba(99, 102, 241, 0.2);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            margin: 0.25rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .source-item:hover {
+            background: rgba(99, 102, 241, 0.4);
+        }
+
+        /* Chat Input */
+        .chat-input-container {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            background: var(--bg-card);
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+        }
+
+        .input-group {
+            flex: 1;
+            position: relative;
+        }
+
+        .chat-input {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-family: inherit;
+            resize: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .chat-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .send-btn {
+            padding: 1rem 1.5rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Stats Card */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-dark);
+            border-radius: 12px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Filters */
+        .filter-group {
+            margin-bottom: 1rem;
+        }
+
+        .filter-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .filter-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .quick-btn {
+            padding: 0.75rem 1rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .quick-btn:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--primary);
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                order: -1;
+            }
+        }
+
+        /* Welcome Message */
+        .welcome {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .welcome-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .welcome-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .welcome-examples {
+            margin-top: 2rem;
+            text-align: left;
+        }
+
+        .welcome-examples h4 {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .example-btn {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            text-align: left;
+            cursor: pointer;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .example-btn:hover {
+            border-color: var(--primary);
+            background: var(--bg-card-hover);
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">📄</div>
+                <span class="logo-text">Contract RAG</span>
+            </div>
+            <div class="status-badge" id="statusBadge">
+                <span class="status-dot"></span>
+                <span id="statusText">Đang kết nối...</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <section class="chat-section">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <h2 class="chat-title">💬 Hỏi đáp về Hợp đồng</h2>
+                    <button onclick="clearChat()"
+                        style="background: none; border: none; color: var(--text-secondary); cursor: pointer;">Xóa lịch
+                        sử</button>
+                </div>
+
+                <div class="chat-messages" id="chatMessages">
+                    <div class="welcome">
+                        <div class="welcome-icon">🤖</div>
+                        <h3 class="welcome-title">Xin chào! Tôi là trợ lý quản lý hợp đồng</h3>
+                        <p>Tôi có thể giúp bạn tìm kiếm thông tin, phân tích và tổng hợp dữ liệu từ các hợp đồng.</p>
+
+                        <div class="welcome-examples">
+                            <h4>Thử hỏi:</h4>
+                            <button class="example-btn"
+                                onclick="askQuestion('Điều kiện phạt của hợp đồng 112/2024 là gì?')">
+                                📋 Điều kiện phạt của hợp đồng 112/2024 là gì?
+                            </button>
+                            <button class="example-btn"
+                                onclick="askQuestion('Tổng giá trị các hợp đồng năm 2024 là bao nhiêu?')">
+                                📊 Tổng giá trị các hợp đồng năm 2024 là bao nhiêu?
+                            </button>
+                            <button class="example-btn"
+                                onclick="askQuestion('So sánh điều khoản bảo hành giữa các hợp đồng mua sắm')">
+                                🔍 So sánh điều khoản bảo hành giữa các hợp đồng mua sắm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-container">
+                    <div class="chat-input-wrapper">
+                        <div class="input-group">
+                            <textarea id="chatInput" class="chat-input" placeholder="Nhập câu hỏi về hợp đồng..."
+                                rows="1" onkeydown="handleKeyDown(event)"></textarea>
+                        </div>
+                        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                            <span>Gửi</span>
+                            <span>→</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <aside class="sidebar">
+            <div class="card">
+                <h3 class="card-title">📊 Thống kê</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalContracts">-</div>
+                        <div class="stat-label">Hợp đồng</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalValue">-</div>
+                        <div class="stat-label">Tổng giá trị</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalPartners">-</div>
+                        <div class="stat-label">Đối tác</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalYears">-</div>
+                        <div class="stat-label">Năm</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">🔍 Bộ lọc</h3>
+                <div class="filter-group">
+                    <label class="filter-label">Đối tác</label>
+                    <select class="filter-select" id="filterPartner">
+                        <option value="">Tất cả đối tác</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Năm</label>
+                    <select class="filter-select" id="filterYear">
+                        <option value="">Tất cả các năm</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">⚡ Hành động nhanh</h3>
+                <div class="quick-actions">
+                    <button class="quick-btn" onclick="triggerIndex()">🔄 Cập nhật Index</button>
+                    <button class="quick-btn" onclick="viewAllContracts()">📋 Xem tất cả hợp đồng</button>
+                    <button class="quick-btn" onclick="window.open('/docs', '_blank')">📖 API Documentation</button>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        const API_BASE = '';
+        let isLoading = false;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkHealth();
+            loadStats();
+            loadFilters();
+        });
+
+        async function checkHealth() {
+            try {
+                const res = await fetch(`${API_BASE}/health`);
+                const data = await res.json();
+
+                if (data.status === 'healthy' && data.vector_store) {
+                    document.getElementById('statusText').textContent = 'Sẵn sàng';
+                    document.querySelector('.status-badge').style.borderColor = 'var(--success)';
+                } else {
+                    document.getElementById('statusText').textContent = 'Chưa có dữ liệu';
+                    document.querySelector('.status-badge').style.borderColor = 'var(--warning)';
+                }
+            } catch (e) {
+                document.getElementById('statusText').textContent = 'Không kết nối được';
+                document.querySelector('.status-badge').style.borderColor = 'var(--error)';
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const res = await fetch(`${API_BASE}/stats`);
+                const data = await res.json();
+
+                document.getElementById('totalContracts').textContent = data.total_contracts || 0;
+                document.getElementById('totalValue').textContent = formatValue(data.total_value || 0);
+                document.getElementById('totalPartners').textContent = data.top_partners?.length || 0;
+                document.getElementById('totalYears').textContent = data.by_year?.length || 0;
+            } catch (e) {
+                console.error('Failed to load stats:', e);
+            }
+        }
+
+        async function loadFilters() {
+            try {
+                // Load partners
+                const partnersRes = await fetch(`${API_BASE}/partners`);
+                const partnersData = await partnersRes.json();
+                const partnerSelect = document.getElementById('filterPartner');
+                partnersData.partners?.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p;
+                    opt.textContent = p;
+                    partnerSelect.appendChild(opt);
+                });
+
+                // Load years
+                const yearsRes = await fetch(`${API_BASE}/years`);
+                const yearsData = await yearsRes.json();
+                const yearSelect = document.getElementById('filterYear');
+                yearsData.years?.forEach(y => {
+                    const opt = document.createElement('option');
+                    opt.value = y;
+                    opt.textContent = y;
+                    yearSelect.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Failed to load filters:', e);
+            }
+        }
+
+        function formatValue(value) {
+            if (value >= 1e9) return (value / 1e9).toFixed(1) + ' tỷ';
+            if (value >= 1e6) return (value / 1e6).toFixed(0) + ' tr';
+            return value.toLocaleString('vi-VN');
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function askQuestion(question) {
+            document.getElementById('chatInput').value = question;
+            sendMessage();
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const query = input.value.trim();
+
+            if (!query || isLoading) return;
+
+            // Clear welcome message on first query
+            const welcome = document.querySelector('.welcome');
+            if (welcome) welcome.remove();
+
+            // Add user message
+            addMessage(query, 'user');
+            input.value = '';
+
+            // Show loading
+            isLoading = true;
+            document.getElementById('sendBtn').disabled = true;
+            const loadingMsg = addMessage('<div class="loading"><div class="loading-spinner"></div> Đang xử lý...</div>', 'assistant', true);
+
+            try {
+                const partner = document.getElementById('filterPartner').value;
+                const year = document.getElementById('filterYear').value;
+
+                const res = await fetch(`${API_BASE}/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query,
+                        partner_name: partner || null,
+                        year: year ? parseInt(year) : null
+                    })
+                });
+
+                const data = await res.json();
+
+                // Remove loading message
+                loadingMsg.remove();
+
+                if (!res.ok) {
+                    throw new Error(data.detail || 'Có lỗi xảy ra từ server');
+                }
+
+                // Add response
+                let content = data.answer;
+
+                // Add sources if available
+                if (data.sources && data.sources.length > 0) {
+                    content += '\n\n<div class="sources"><div class="sources-title">Nguồn tham khảo</div>';
+                    data.sources.slice(0, 5).forEach(s => {
+                        content += `<span class="source-item">${s.contract_id || 'N/A'}</span>`;
+                    });
+                    content += '</div>';
+                }
+
+                // Add meta info
+                const meta = [];
+                if (data.query_type) meta.push(`Loại: ${data.query_type}`);
+                if (data.contracts_analyzed) meta.push(`${data.contracts_analyzed} hợp đồng`);
+                if (data.total_value) meta.push(`Tổng: ${formatValue(data.total_value)} VNĐ`);
+
+                addMessage(content, 'assistant', true, meta.join(' • '));
+
+            } catch (e) {
+                loadingMsg.remove();
+                addMessage('Đã xảy ra lỗi khi xử lý câu hỏi. Vui lòng thử lại.', 'assistant');
+            }
+
+            isLoading = false;
+            document.getElementById('sendBtn').disabled = false;
+        }
+
+        function addMessage(content, role, isHtml = false, meta = '') {
+            const container = document.getElementById('chatMessages');
+            const msg = document.createElement('div');
+            msg.className = `message ${role}`;
+
+            if (isHtml) {
+                msg.innerHTML = `<div class="message-content">${content}</div>`;
+            } else {
+                msg.innerHTML = `<div class="message-content">${escapeHtml(content)}</div>`;
+            }
+
+            if (meta) {
+                msg.innerHTML += `<div class="message-meta">${meta}</div>`;
+            }
+
+            container.appendChild(msg);
+            container.scrollTop = container.scrollHeight;
+            return msg;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function clearChat() {
+            document.getElementById('chatMessages').innerHTML = '';
+        }
+
+        async function triggerIndex() {
+            if (confirm('Bắt đầu cập nhật index? Quá trình này có thể mất vài phút.')) {
+                try {
+                    const res = await fetch(`${API_BASE}/index`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ recreate: false })
+                    });
+                    const data = await res.json();
+                    alert(data.message);
+                } catch (e) {
+                    alert('Lỗi khi khởi tạo index');
+                }
+            }
+        }
+
+        function viewAllContracts() {
+            window.open('/docs#/default/list_contracts_contracts_get', '_blank');
+        }
+    </script>
+</body>
+
+</html>
