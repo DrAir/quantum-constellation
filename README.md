@@ -1,167 +1,129 @@
 # Contract RAG System - Hệ thống Quản lý Hợp đồng Thông minh
 
-Hệ thống quản lý và truy xuất thông tin từ hợp đồng sử dụng công nghệ **Advanced RAG + Agentic Workflow**.
+Hệ thống quản lý và truy xuất thông tin từ hợp đồng sử dụng công nghệ **Advanced RAG + Agentic Workflow**, được tối ưu hóa cho việc xử lý văn bản pháp lý tiếng Việt và trích xuất dữ liệu có cấu trúc.
 
-## ✨ Tính năng
+## ✨ Tính năng Nổi bật
 
-- 🔍 **Truy xuất chính xác** - Tìm kiếm thông tin chi tiết từ từng điều khoản (độ chính xác > 95%)
-- 📊 **Tổng hợp thông minh** - Phân tích và báo cáo từ nhiều hợp đồng cùng lúc
-- 🚀 **Hybrid Search** - Kết hợp Vector Search + Keyword Search (BM25)
-- 🎯 **Reranking** - Sử dụng BGE-Reranker-v2-m3 để tăng độ chính xác
-- 🌐 **Web Interface** - Giao diện chat trực quan
+- 🔍 **Truy xuất ngữ nghĩa (Semantic Search)** - Tìm kiếm thông tin chính xác > 95% nhờ Hybrid Search (Vector + BM25).
+- 📊 **Tổng hợp đa văn bản (Multi-doc)** - Tự động tổng hợp dữ liệu từ hàng chục hợp đồng cùng lúc.
+- � **Trích xuất Action Items (Mới)** - Tự động nhận diện Timeline, Deadline, Mốc thanh toán và Nghĩa vụ từ văn bản hợp đồng.
+- 🛡️ **Cơ chế Fallback Thông minh** - Tự động chuyển đổi giữa tìm kiếm cụ thể và tìm kiếm toàn cục để đảm bảo luôn có kết quả.
+- 🎯 **Advanced Reranking** - Tích hợp BAAI/bge-reranker-v2-m3 (có chế độ bypass khi mạng yếu).
+- ⚡ **Hiệu năng cao** - Sử dụng Qdrant cho Vector Store và SQLite cho Metadata quản lý hàng triệu bản ghi.
 
-## 🏗️ Kiến trúc
+## 🏗️ Kiến trúc Hệ thống
 
-```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   Web Interface │────▶│   FastAPI        │────▶│  Query Router   │
-└─────────────────┘     └──────────────────┘     └────────┬────────┘
-                                                          │
-                        ┌─────────────────────────────────┼─────────────────────────────────┐
-                        │                                 │                                 │
-                        ▼                                 ▼                                 ▼
-               ┌────────────────┐              ┌────────────────┐              ┌────────────────┐
-               │  Single-hop    │              │   Multi-doc    │              │   Metadata     │
-               │   Workflow     │              │   Workflow     │              │    Query       │
-               └───────┬────────┘              └───────┬────────┘              └───────┬────────┘
-                       │                               │                               │
-                       ▼                               ▼                               ▼
-               ┌────────────────┐              ┌────────────────┐              ┌────────────────┐
-               │ Hybrid Search  │              │  Map-Reduce    │              │    SQLite      │
-               │  + Reranker    │              │  Summarization │              │   Metadata     │
-               └───────┬────────┘              └───────┬────────┘              └────────────────┘
-                       │                               │
-                       ▼                               ▼
-               ┌────────────────────────────────────────────┐
-               │              Qdrant Vector DB              │
-               │         (BGE-M3 Dense + Sparse)            │
-               └────────────────────────────────────────────┘
+```mermaid
+graph TD
+    Client[Web Interface / API] --> Router[Query Router AI]
+    
+    Router -->|Hỏi cụ thể| Single[Single-hop Workflow]
+    Router -->|Tổng hợp| Multi[Multi-doc Workflow]
+    Router -->|Tiến độ/Deadline| Action[Action Extraction Workflow]
+    Router -->|Thống kê| Meta[Metadata Query]
+    
+    subgraph Core Engine
+        Single & Multi & Action --> Search[Hybrid Search Engine]
+        Search -->|Vector| Qdrant[Qdrant DB]
+        Search -->|Keyword| BM25[BM25 Sparse]
+        Search -->|Filter| SQLite[SQLite Metadata]
+        
+        Search --> Rerank[Reranker Model]
+        Rerank --> LLM[LLM Generator (Ollama)]
+    end
+    
+    LLM --> Response[Final Answer]
 ```
 
-## 🚀 Bắt đầu
+## 🚀 Cài đặt & Triển khai
 
-### 1. Cài đặt dependencies
+### 1. Yêu cầu hệ thống
+- Python 3.10+
+- Docker & Docker Compose
+- RAM: Tối thiểu 16GB (để chạy LLM local)
 
+### 2. Cài đặt dependencies
 ```bash
 cd quantum-constellation
 pip install -r requirements.txt
 ```
 
-### 2. Khởi động Qdrant (Vector Database)
-
+### 3. Khởi động Infrastructure
 ```bash
+# Khởi động Qdrant Vector DB
 docker-compose up -d
 ```
 
-### 3. Khởi động Ollama (nếu chưa có)
-
+### 4. Cài đặt LLM (Ollama)
 ```bash
-# Cài đặt Ollama từ https://ollama.ai
+# Tải model (Khuyến nghị gpt-oss:20b hoặc Qwen2.5-14b cho tiếng Việt tốt nhất)
 ollama pull gpt-oss:20b
 ollama serve
 ```
 
-### 4. Chạy ứng dụng
-
+### 5. Chạy ứng dụng
 ```bash
-# Chạy API server
+# Khởi động API Server
 uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 5. Truy cập
-
-- **Web Interface**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
-
-## 📁 Cấu trúc dự án
+## 📁 Cấu trúc Project
 
 ```
 quantum-constellation/
 ├── config/
-│   ├── settings.py          # Cấu hình hệ thống
-│   └── prompts.py            # LLM prompts
+│   ├── settings.py           # Cấu hình Global & Env vars
+│   └── prompts.py            # System Prompts tối ưu cho RAG
 ├── data/
-│   ├── raw/                  # File hợp đồng gốc
-│   ├── processed/            # File đã xử lý (.md)
-│   └── metadata/             # Metadata JSON
+│   ├── contracts.db          # SQLite Database
+│   ├── raw/                  # Thư mục chứa file gốc
+│   └── processed/            # File đã xử lý (Markdown)
 ├── src/
-│   ├── data_pipeline/
-│   │   ├── converter.py      # TXT → MD converter
-│   │   ├── extractor.py      # Metadata extraction
-│   │   └── chunker.py        # Hierarchical chunking
-│   ├── storage/
-│   │   ├── vector_store.py   # Qdrant operations
-│   │   └── metadata_store.py # SQLite operations
-│   ├── retrieval/
-│   │   ├── hybrid_search.py  # Vector + BM25 search
-│   │   └── reranker.py       # BGE reranker
-│   ├── workflow/
-│   │   ├── query_router.py   # Query classification
-│   │   ├── single_hop.py     # Single contract queries
-│   │   └── multi_doc.py      # Multi-doc summarization
-│   └── api/
-│       └── main.py           # FastAPI application
-├── static/
-│   └── index.html            # Web interface
-├── docker-compose.yml
-├── requirements.txt
-└── README.md
+│   ├── data_pipeline/        # Pipeline xử lý dữ liệu đầu vào
+│   ├── storage/              # Kết nối Qdrant & SQLite
+│   ├── retrieval/            # Logic tìm kiếm (Hybrid + Rerank)
+│   ├── workflow/             # Các luồng xử lý chính
+│   │   ├── query_router.py   # Phân loại câu hỏi
+│   │   ├── single_hop.py     # Hỏi đáp thông thường
+│   │   ├── multi_doc.py      # Tổng hợp nhiều văn bản
+│   │   └── action_item.py    # Trích xuất nhiệm vụ/tiến độ (NEW)
+│   └── api/                  # FastAPI Endpoints
+└── static/                   # Giao diện Web (Chat UI)
 ```
 
-## 📖 API Endpoints
+## 📖 Hướng dẫn sử dụng
 
-| Method | Endpoint | Mô tả |
-|--------|----------|-------|
-| POST | `/query` | Hỏi đáp về hợp đồng |
-| POST | `/index` | Index hợp đồng mới |
-| GET | `/contracts` | Danh sách hợp đồng |
-| GET | `/contracts/{id}` | Chi tiết hợp đồng |
-| GET | `/stats` | Thống kê tổng quan |
-| GET | `/health` | Health check |
+### 1. Truy cập
+- **Web Chat**: http://localhost:8000
+- **API Swagger**: http://localhost:8000/docs
 
-## 🔧 Cấu hình
+### 2. Các loại câu hỏi hỗ trợ
 
-Chỉnh sửa file `config/settings.py`:
+#### 🔹 Hỏi đáp chi tiết (Single-hop)
+> "Điều kiện thanh toán tạm ứng của hợp đồng 126/2025 là gì?"
+> "Quy định về bảo hành trong hợp đồng mua sắm máy in?"
 
-```python
-# LLM Model
-llm_model = "gpt-oss:20b"  # hoặc model khác
+#### 🔹 Trích xuất tiến độ (Action Items)
+> "Các mốc thực hiện của hợp đồng 126/2025/CHKNB-HĐMB"
+> "Liệt kê deadline giao hàng và nghiệm thu của công ty Bầu Trời Việt"
 
-# Qdrant
-qdrant_host = "localhost"
-qdrant_port = 6333
+#### 🔹 Tổng hợp thông tin (Multi-doc)
+> "Tổng giá trị các hợp đồng đã ký với đối tác Elcom trong năm 2024?"
+> "Tóm tắt các điều khoản phạt chậm tiến độ của tất cả hợp đồng CNTT."
 
-# Embedding
-embedding_model = "BAAI/bge-m3"
-```
+## 🔧 Cơ chế Debus & Logging
 
-## 📝 Ví dụ sử dụng
+Hệ thống có tích hợp sẵn các công cụ debug trong thư mục `data/`:
+- `error.log`: Ghi nhận chi tiết lỗi Runtime (Stacktrace).
+- `debug_context.txt`: Kiểm tra nội dung văn bản được gửi vào LLM.
+- `debug_id.txt`: Kiểm tra Contract ID đã được resolve.
+- `debug_fallback.txt`: Ghi nhận khi hệ thống kích hoạt chế độ Fallback Search.
 
-### Query đơn (Single-hop)
-```
-Điều kiện phạt của Hợp đồng số 112/2024 là gì?
-```
-
-### Query tổng hợp (Multi-doc)
-```
-Tổng giá trị các hợp đồng năm 2024 là bao nhiêu?
-```
-
-### Query thống kê
-```
-Danh sách các đối tác đã ký hợp đồng
-```
-
-## 🛠️ Phát triển
-
+## 🤝 Đóng góp
+Sử dụng `pytest` để chạy kiểm thử trước khi commit:
 ```bash
-# Chạy tests
 pytest tests/ -v
-
-# Type checking
-mypy src/
 ```
 
 ## 📄 License
-
 MIT License

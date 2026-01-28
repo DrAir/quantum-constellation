@@ -163,21 +163,21 @@ class QueryRouter:
         """Extract structured parameters from query"""
         params = {}
         
-        # Extract contract number (support alphanumeric and various separators)
+        # Extract contract number (must contain at least one digit)
         contract_num_match = re.search(
-            r'hợp đồng\s+(số\s+)?([\w\.\/\-]+)', query, re.IGNORECASE
+            r'hợp đồng\s+(?:số\s+)?((?=\S*\d)[\w\.\/\-]+)', query, re.IGNORECASE
         )
         if contract_num_match:
-            params['contract_number'] = contract_num_match.group(2)
+            params['contract_number'] = contract_num_match.group(1)
         
         # Extract year
         year_match = re.search(r'năm\s+(\d{4})', query, re.IGNORECASE)
         if year_match:
             params['year'] = int(year_match.group(1))
         
-        # Extract partner/company name
+        # Extract partner/company name (exclude question words)
         partner_match = re.search(
-            r'(công ty|đối tác)\s+([A-Za-zÀ-ỹ\s]+?)(?:\s+(?:năm|trong|từ|đến)|$)',
+            r'(công ty|đối tác)\s+(?!nào\b|gì\b|bao nhiêu\b)([A-Za-zÀ-ỹ\s]+?)(?:\s+(?:năm|trong|từ|đến|có)|$)',
             query, re.IGNORECASE
         )
         if partner_match:

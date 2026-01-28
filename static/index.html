@@ -482,6 +482,39 @@
             border-color: var(--primary);
             background: var(--bg-card-hover);
         }
+
+        .suggestion-btn {
+            display: block;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--primary);
+            font-size: 0.875rem;
+            text-align: left;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .suggestion-btn:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--primary);
+        }
+
+        .suggestions-container {
+            margin-top: 1rem;
+            padding-top: 0.5rem;
+            border-top: 1px dashed var(--border);
+        }
+
+        .suggestions-title {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
     </style>
 </head>
 
@@ -732,11 +765,40 @@
                 // Add response
                 let content = data.answer;
 
+                // Parse suggestions
+                let suggestions = [];
+                // Relaxed regex: match --- followed by ANY characters up to "Gợi ý"
+                const suggestionRegex = /---[\s\S]*?Gợi ý.*?tiếp theo:?(?:\*\*)?([\s\S]*)/i;
+                const match = content.match(suggestionRegex);
+
+                if (match) {
+                    content = content.replace(suggestionRegex, '').trim();
+                    const rawSuggestions = match[1].trim();
+                    // Extract items from numbered list "1. Question"
+                    suggestions = rawSuggestions.split('\n')
+                        .map(line => {
+                            let clean = line.replace(/^\d+\.\s*/, '').trim();
+                            return clean.replace(/^\[|\]$/g, '');
+                        })
+                        .filter(line => line.length > 5);
+                }
+
                 // Add sources if available
                 if (data.sources && data.sources.length > 0) {
                     content += '\n\n<div class="sources"><div class="sources-title">Nguồn tham khảo</div>';
                     data.sources.slice(0, 5).forEach(s => {
                         content += `<span class="source-item">${s.contract_id || 'N/A'}</span>`;
+                    });
+                    content += '</div>';
+                }
+
+                // Add suggestions to content HTML
+                if (suggestions.length > 0) {
+                    content += '<div class="suggestions-container"><div class="suggestions-title">Gợi ý câu hỏi tiếp theo:</div>';
+                    suggestions.forEach(s => {
+                        // Clean string if it has [ ] brackets
+                        const cleanS = s.replace(/^\[|\]$/g, '');
+                        content += `<button class="suggestion-btn" onclick="askQuestion('${cleanS.replace(/'/g, "\\'")}')">💡 ${cleanS}</button>`;
                     });
                     content += '</div>';
                 }

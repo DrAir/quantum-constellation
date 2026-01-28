@@ -176,44 +176,51 @@ class MultiDocWorkflow:
         query: str,
         contracts: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """Process a batch of contracts"""
-        results = []
-        
-        for contract in contracts:
-            contract_id = contract.get('id', '')
-            
-            # Search for relevant content in this contract
-            search_results = self.search_engine.search(
-                query=query,
-                top_k=3,
-                contract_id=contract_id,
-                include_parent_context=True
-            )
-            
-            if search_results:
-                # Combine relevant chunks
-                content_parts = []
-                for r in search_results:
-                    content = r.parent_content or r.content
-                    content_parts.append(content)
-                
-                contract_content = "\n\n".join(content_parts)
-                
-                # Generate summary for this contract
-                summary = await self._summarize_contract(query, contract, contract_content)
-            else:
-                summary = f"Không tìm thấy nội dung liên quan trong hợp đồng {contract_id}"
-            
-            results.append({
-                'contract_id': contract_id,
-                'contract_number': contract.get('contract_number'),
-                'partner_name': contract.get('partner_name'),
-                'sign_date': contract.get('sign_date'),
-                'total_value': contract.get('total_value'),
-                'summary': summary
-            })
-        
+        """Process a batch of contracts concurrently"""
+        tasks = [self._process_single_contract(query, contract) for contract in contracts]
+        results = await asyncio.gather(*tasks)
         return results
+
+    async def _process_single_contract(
+        self,
+        query: str,
+        contract: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Process a single contract"""
+        contract_id = contract.get('id', '')
+        
+        # Search for relevant content in this contract
+        # Run synchronous search in thread pool to avoid blocking
+        search_results = await asyncio.to_thread(
+            self.search_engine.search,
+            query=query,
+            top_k=3,
+            contract_id=contract_id,
+            include_parent_context=True
+        )
+        
+        if search_results:
+            # Combine relevant chunks
+            content_parts = []
+            for r in search_results:
+                content = r.parent_content or r.content
+                content_parts.append(content)
+            
+            contract_content = "\n\n".join(content_parts)
+            
+            # Generate summary for this contract
+            summary = await self._summarize_contract(query, contract, contract_content)
+        else:
+            summary = f"Không tìm thấy nội dung liên quan trong hợp đồng {contract_id}"
+        
+        return {
+            'contract_id': contract_id,
+            'contract_number': contract.get('contract_number'),
+            'partner_name': contract.get('partner_name'),
+            'sign_date': contract.get('sign_date'),
+            'total_value': contract.get('total_value'),
+            'summary': summary
+        }
     
     async def _summarize_contract(
         self,
@@ -240,7 +247,7 @@ class MultiDocWorkflow:
         )
         
         try:
-            response = self.llm.complete(prompt)
+            response = await self.llm.acomplete(prompt)
             return response.text.strip()
         except Exception as e:
             logger.error(f"Error summarizing contract: {e}")
@@ -294,8 +301,20 @@ class MultiDocWorkflow:
         )
         
         try:
-            response = self.llm.complete(prompt)
-            return response.text.strip()
+            response = await self.llm.acomplete(prompt)
+            result = response.text.strip()
+            
+            # Enrich with default suggestions if missing
+            if "Gợi ý" not in result and "câu hỏi tiếp theo" not in result.lower():
+                result += """
+
+---
+**Gợi ý câu hỏi tiếp theo:**
+1. Xem chi tiết danh sách hợp đồng
+2. Phân tích xu hướng theo thời gian
+3. Thống kê theo đối tác"""
+            
+            return result
         except Exception as e:
             logger.error(f"Error in reduce phase: {e}")
             return f"Lỗi khi tổng hợp: {e}\n\n{summaries_text[:2000]}"

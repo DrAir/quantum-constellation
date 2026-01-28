@@ -22,21 +22,24 @@ JSON OUTPUT:"""
 
 
 # Single-hop Query Prompt
-SINGLE_HOP_QUERY_PROMPT = """Bạn là trợ lý AI chuyên phân tích hợp đồng. Dựa trên các đoạn văn bản hợp đồng được cung cấp, hãy trả lời câu hỏi một cách chính xác và chi tiết.
+SINGLE_HOP_QUERY_PROMPT = """Bạn là trợ lý AI chuyên phân tích hợp đồng. Hãy trả lời câu hỏi của người dùng một cách NGẮN GỌN và TRỰC DIỆN.
 
 NGUYÊN TẮC:
-1. Chỉ trả lời dựa trên thông tin có trong văn bản được cung cấp
-2. Nếu không tìm thấy thông tin, hãy nói rõ "Không tìm thấy thông tin này trong hợp đồng"
-3. Trích dẫn Điều/Khoản cụ thể khi trả lời
-4. Trả lời bằng tiếng Việt
+1. **DIRECT ANSWER**: Đi thẳng vào câu trả lời ngay dòng đầu tiên. Không dùng các câu dẫn dắt như "Dựa trên tài liệu...".
+2. **NGẮN GỌN**: Sử dụng gạch đầu dòng (bullet points) để trình bày thông tin. Tránh viết đoạn văn dài dòng.
+3. **TRÍCH DẪN**: Ghi rõ nguồn (Điều X) ở cuối mỗi ý.
+4. **TIẾNG VIỆT**: Trả lời hoàn toàn bằng tiếng Việt.
 
-FORMAT TRẢ LỜI:
-- Sử dụng **in đậm** cho thông tin quan trọng (số tiền, phần trăm, thời hạn)
-- Khi có nhiều mục cần liệt kê, sử dụng bảng markdown:
-  | Cột 1 | Cột 2 | Cột 3 |
-  |-------|-------|-------|
-  | ...   | ...   | ...   |
-- Cuối câu trả lời, ghi rõ nguồn: > *Trích dẫn: Điều X, Nguồn Y*
+CẤU TRÚC TRẢ LỜI CẦN TUÂN THỦ:
+[Câu trả lời ngắn gọn, trực tiếp]
+(Nếu có danh sách, dùng bảng Markdown)
+
+---
+**Gợi ý câu hỏi tiếp theo:**
+(Tạo 3 câu hỏi liên quan chặt chẽ đến câu trả lời trên và văn bản hợp đồng)
+1. [Câu hỏi gợi mở thêm thông tin cụ thể]
+2. [Câu hỏi về khía cạnh khác của vấn đề]
+3. [Câu hỏi kiểm tra chi tiết liên quan]
 
 CÁC ĐOẠN VĂN BẢN LIÊN QUAN:
 {context}
@@ -58,24 +61,30 @@ TÓM TẮT (liệt kê các điểm chính liên quan đến yêu cầu):"""
 
 
 # Multi-doc Summarization - Reduce Phase
-REDUCE_SUMMARIZE_PROMPT = """Bạn là trợ lý AI chuyên tổng hợp báo cáo hợp đồng. Dựa trên các tóm tắt từ nhiều hợp đồng khác nhau, hãy viết một báo cáo tổng quan.
+REDUCE_SUMMARIZE_PROMPT = """Bạn là trợ lý AI chuyên tổng hợp báo cáo hợp đồng. Hãy tổng hợp thông tin một cách CÔ ĐỌNG và TRỰC DIỆN.
 
 YÊU CẦU BAN ĐẦU: {query}
 
 CÁC TÓM TẮT TỪ TỪNG HỢP ĐỒNG:
 {summaries}
 
-HƯỚNG DẪN FORMAT:
-1. Sử dụng bảng markdown để liệt kê danh sách hợp đồng (bắt buộc):
-   | STT | Số HĐ | Đối tác | Giá trị | Ngày ký | Ghi chú |
-   |-----|-------|---------|---------|---------|---------|
-   | 1   | ...   | ...     | ...     | ...     | ...     |
+CẤU TRÚC BÁO CÁO (YÊU CẦU BẮT BUỘC):
 
-2. Sử dụng heading (##, ###) để phân chia các phần rõ ràng
-3. Tính tổng giá trị nếu câu hỏi yêu cầu
-4. Format số tiền với dấu phẩy phân cách (ví dụ: 1,234,567,890 VNĐ)
+1. **TỔNG QUAN**: Trả lời thẳng vào câu hỏi (Ví dụ: Tổng giá trị là X VNĐ; Có 5 đối tác...). Ngắn gọn, súc tích.
 
-BÁO CÁO TỔNG HỢP:"""
+---
+**Gợi ý câu hỏi tiếp theo:**
+(Tạo 3 câu hỏi phân tích sâu hơn dựa trên báo cáo trên)
+1. [Câu hỏi chi tiết về một đối tác hoặc hợp đồng cụ thể]
+2. [Câu hỏi so sánh hoặc phân tích xu hướng]
+3. [Câu hỏi về các điều khoản bất thường nếu có]
+
+HƯỚNG DẪN CHUNG:
+- Format số tiền: 1,234,567,890 VNĐ
+- KHÔNG hiển thị bảng danh sách trừ khi được hỏi cụ thể.
+- Tập trung vào con số tổng hợp.
+
+BÁO CÁO:"""
 
 
 # Query Router Prompt
@@ -116,14 +125,20 @@ ACTION_EXTRACTION_PROMPT = """Bạn là hệ thống trích xuất dữ liệu t
 
 HƯỚNG DẪN XỬ LÝ (QUAN TRỌNG):
 1. TÌM KIẾM NGAY CÁC CON SỐ: "180 ngày", "30 ngày", "06 tháng", "24 tháng". Đây là THỜI HẠN. HÃY ĐIỀN VÀO BẢNG.
-2. Tìm kiếm từ khóa: "thời gian thực hiện", "hiệu lực", "thanh toán".
-3. KHÔNG ĐƯỢC để bảng trống. Nếu thấy số ngày, hãy trích xuất.
-4. Trích dẫn nguyên văn câu chứa thông tin vào cột Ghi chú.
+2. KHÔNG ĐƯỢC để bảng trống. Nếu thấy số ngày, hãy trích xuất.
+3. Trích dẫn nguyên văn câu chứa thông tin vào cột Ghi chú.
 
 ĐỊNH DẠNG KẾT QUẢ (Markdown Table):
 | STT | Hành động/Nghĩa vụ | Đối tượng (Bên A/B) | Thời hạn (Deadline) | Ghi chú/Điều khoản |
 |-----|-------------------|---------------------|---------------------|--------------------|
 | 1   | Thực hiện hợp đồng| Bên B               | 180 ngày            | Điều 4.1           |
+
+---
+**Gợi ý câu hỏi tiếp theo:**
+(Tạo 3 câu hỏi liên quan đến deadlines hoặc trách nhiệm vừa trích xuất)
+1. [Câu hỏi về hậu quả nếu chậm trễ]
+2. [Câu hỏi chi tiết về quy trình thực hiện]
+3. [Câu hỏi về người phụ trách cụ thể]
 
 NGUỒN DỮ LIỆU (CONTEXT):
 ---------------------
